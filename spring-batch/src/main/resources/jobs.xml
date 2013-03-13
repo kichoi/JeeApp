@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/batch 
+		http://www.springframework.org/schema/batch/spring-batch-2.1.xsd
+		http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+
+	<job id="exportCustomers" xmlns="http://www.springframework.org/schema/batch">
+		<step id="step1">
+			<tasklet>
+				<chunk reader="customerReader"  writer="fileWriter" commit-interval="1">
+				</chunk>
+			</tasklet>
+		</step>
+	</job>
+	
+	<bean id="fileWriter" class="org.springframework.batch.item.file.FlatFileItemWriter" scope="step">
+		<property name="resource" value="file:#{jobParameters['outputFile']}" />
+		<property name="lineAggregator">
+			<bean class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+				<property name="fieldExtractor">
+ 					<bean class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+                        <property name="names" value="firstName, lastName"/>
+                    </bean>				
+				</property> 
+			</bean>			
+		</property>
+	</bean>
+
+ 	
+	<bean id="customerReader"
+		class="org.springframework.batch.item.database.JdbcCursorItemReader">
+		<property name="dataSource" ref="dataSource" />
+		<property name="sql" value="select * from ClientDetail" />
+		<property name="rowMapper">
+			<bean class="org.springframework.jdbc.core.BeanPropertyRowMapper">
+			<constructor-arg value="com.k1computing.spring.batch.Customer" />
+			</bean>
+		</property>
+	</bean>
+
+
+	<bean id="jobRepository" class="org.springframework.batch.core.repository.support.SimpleJobRepository" scope="prototype">
+		<constructor-arg ref="mapJobInstanceDao" />
+		<constructor-arg ref="mapJobExecutionDao" />
+		<constructor-arg ref="mapStepExecutionDao" />
+		<constructor-arg ref="mapExecutionContextDao" />
+ 	</bean>
+ 	<bean id="mapJobInstanceDao" class="org.springframework.batch.core.repository.dao.MapJobInstanceDao" />
+ 	<bean id="mapJobExecutionDao" class="org.springframework.batch.core.repository.dao.MapJobExecutionDao" />
+ 	<bean id="mapStepExecutionDao" class="org.springframework.batch.core.repository.dao.MapStepExecutionDao" />
+ 	<bean id="mapExecutionContextDao" class="org.springframework.batch.core.repository.dao.MapExecutionContextDao" />
+ 
+	<bean id="jobLauncher" class="org.springframework.batch.core.launch.support.SimpleJobLauncher">
+		<property name="jobRepository" ref="jobRepository" />
+	</bean>
+
+	<import resource="datasource.xml" />
+	
+</beans>
